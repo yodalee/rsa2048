@@ -31,7 +31,9 @@ def dechunk(xs: list[int]) -> int:
 
 def CT_BFU(a, b, omega, q):
     m = (b * omega) % q
-    return (a + m) % q, (a - m) % q
+    r1, r2 = (a + m) % q, (a - m) % q
+    print(f"{a}, {b}, {omega} -> {r1}, {r2}")
+    return r1, r2
 
 
 def GS_BFU(a, b, omega, q):
@@ -39,6 +41,7 @@ def GS_BFU(a, b, omega, q):
     sub = ((a - b) * omega) % q
     add = add // 2 if add % 2 == 0 else (add + q) // 2
     sub = sub // 2 if sub % 2 == 0 else (sub + q) // 2
+    print(f"{a}, {b}, {omega} -> {add}, {sub}")
     return add, sub
 
 
@@ -65,5 +68,29 @@ def ntt_4(xs: list[int], omega: int, prime: int) -> list[int]:
             twiddle_index += 1
 
         distance //= 2
+
+    return xs
+
+
+def intt_4(xs: list[int], omega: int, prime: int) -> list[int]:
+    l = len(xs)
+    twiddle_factors = [pow(omega, i, prime) for i in range(l)]
+    twiddle_index = l-1
+
+    distance = 1
+
+    while distance < l:
+        for start in range(0, l, 2*distance):
+            for i in range(distance):
+                tf = twiddle_factors[l-br(twiddle_index, 2)]
+                idx1 = start + i
+                idx2 = start + i + distance
+                xs[idx1], xs[idx2] = GS_BFU(xs[idx1],
+                                            xs[idx2], tf, prime)
+            twiddle_index -= 1
+
+        distance *= 2
+
+    xs = list(map(lambda x: x * 5761 % prime, xs))
 
     return xs

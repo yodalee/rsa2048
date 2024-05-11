@@ -31,6 +31,11 @@ class TestIntmul2048(unittest.TestCase):
         l = ntt_4(l, 1925, 7681)
         self.assertEqual([1467, 3471, 2807, 7621], l)
 
+    def test_intt(self):
+        l = [1467, 3471, 2807, 7621]
+        l = intt_4(l, 1925, 7681)
+        self.assertEqual([1, 2, 3, 4], l)
+
     def test_br(self):
         self.assertEqual(br(1, 8), 128)
         self.assertEqual(br(2, 8), 64)
