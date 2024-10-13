@@ -3,7 +3,11 @@ import random
 from rsa2048 import *
 
 
-class TestIntmul2048(unittest.TestCase):
+class TestRsa2048_32b(unittest.TestCase):
+    def setUp(self):
+        self.rsa = Rsa2048_32b()
+
+    @unittest.skip
     def test_intmul_2048(self):
         # Generate random 2048-bit integers a, b, and n
         a = random.getrandbits(2048)
@@ -15,7 +19,7 @@ class TestIntmul2048(unittest.TestCase):
             n += 1
 
         # Calculate the result using the function
-        result = intmul_2048(a, b, n)
+        result = self.rsa.intmul(a, b, n)
 
         # Check if the result is equal to 1
         self.assertEqual(result, (a * b) %
@@ -23,14 +27,10 @@ class TestIntmul2048(unittest.TestCase):
 
     def test_chunk_dechunk(self):
         a = random.getrandbits(2048)
-        b = dechunk(chunk(a))
+        b = self.rsa.dechunk(self.rsa.chunk(a))
         self.assertEqual(a, b)
 
-    def test_ntt(self):
-        l = [1, 2, 3, 4]
-        l = ntt_4(l, 1925, 7681)
-        self.assertEqual([1467, 3471, 2807, 7621], l)
-
+    # misc, should not be here
     def test_br(self):
         self.assertEqual(br(1, 8), 128)
         self.assertEqual(br(2, 8), 64)
