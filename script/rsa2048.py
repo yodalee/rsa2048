@@ -102,8 +102,22 @@ class Rsa2048_32b(Rsa2048):
 
     def ntt(self, l: list[int]) -> list[int]:
         assert len(l) == 384, "Invalid input to NTT method, length should be 384"
-        raise NotImplementedError
+        dist = 192
+        # for dist in [192, 96, 48, 24, 12, 6, 3]:
+        for iter_times in range(384 // dist // 2):
+            start = iter_times * dist
+            zeta = 12288
+            for i in range(start, start + dist):
+                CT_BFU(l[i], l[i+dist], zeta, 12289)
+        return l
 
     def intt(self, l: list[int]) -> list[int]:
         assert len(l) == 384, "Invalid input to NTT method, length should be 384"
-        raise NotImplementedError
+        dist = 192
+        # for dist in [192, 96, 48, 24, 12, 6, 3]:
+        for iter_times in range(384 // dist // 2):
+            start = iter_times * dist
+            zeta = 12288
+            for i in range(start, start + dist):
+                GS_BFU(l[i], l[i+dist], zeta, 12289)
+        return l

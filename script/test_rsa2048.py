@@ -1,5 +1,6 @@
 import unittest
 import random
+import copy
 from rsa2048 import *
 
 
@@ -34,6 +35,26 @@ class TestRsa2048_32b(unittest.TestCase):
     def test_br(self):
         self.assertEqual(br(1, 8), 128)
         self.assertEqual(br(2, 8), 64)
+
+    def test_BFU(self):
+        a = 199
+        b = 384
+        omega = 12288  # 12288 is the -1
+        q = 12289
+        fa, fb = CT_BFU(a, b, omega, q)
+        ba, bb = GS_BFU(fa, fb, omega, q)
+        self.assertEqual(a, ba)
+        self.assertEqual(b, bb)
+
+    def test_ntt_intt(self):
+        xs = [1 for i in range(384)]
+        ys = copy.deepcopy(xs)
+        ys = self.rsa.ntt(ys)
+        self.assertNotEqual(xs, ys)
+
+        zs = copy.deepcopy(ys)
+        zs = self.rsa.intt(zs)
+        self.assertEqual(xs, zs)
 
 
 if __name__ == '__main__':
