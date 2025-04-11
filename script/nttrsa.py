@@ -1,4 +1,18 @@
 
+# Helper function of NTT
+def CT_BFU(a, b, omega, q):
+    m = (b * omega) % q
+    return (a + m) % q, (a - m) % q
+
+
+def GS_BFU(a, b, omega, q):
+    add = (a + b) % q
+    sub = ((a - b) * omega) % q
+    add = add // 2 if add % 2 == 0 else (add + q) // 2
+    sub = sub // 2 if sub % 2 == 0 else (sub + q) // 2
+    return add, sub
+
+
 # Abstract class for Rsa using NTT to speed up the multiplication
 class NttRsa:
     def __init__(self, N: int, l: int, len_poly: int, q1: int, q2: int):
