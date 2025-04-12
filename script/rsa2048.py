@@ -76,7 +76,7 @@ class NttRsa2048_32b(NttRsa):
                 zeta_idx += 1
 
                 for j in range(dist):
-                    # print(start + j, start + j + dist)
+                    # print(f"NTT: {start + j} {start + j + dist} {zeta}")
                     l[start + j], l[start + j + dist] = CT_BFU(
                         l[start + j], l[start + j + dist], zeta, q)
         return l
@@ -84,19 +84,34 @@ class NttRsa2048_32b(NttRsa):
     def intt(self, l: list[int], zetas: list[int], q: int) -> list[int]:
         assert len(
             l) == self.len_poly, f"intt: Length of input list must be {self.len_poly}"
+        assert len(
+            zetas) == self.ntt_len, f"intt: Length of zetas must be {self.ntt_len}"
+
+        for i, dist in enumerate([3, 6, 12, 24, 48, 96, 192]):
+            zeta_idx = -1 * (1 << (6-i))
+            for start in range(0, len(l), dist * 2):
+                idx = self.ntt_index[zeta_idx]
+                zeta = zetas[128-idx]
+                zeta_idx += 1
+
+                for j in range(dist):
+                    # print(f"INTT: {start + j} {start + j + dist} {zeta}")
+                    l[start + j], l[start + j + dist] = GS_BFU(
+                        l[start + j], l[start + j + dist], zeta, q)
+        return l
 
     def ntt_q1(self, l: list[int]) -> list[int]:
         """Run NTT on the integer list"""
-        return self.ntt(l, self.zetas1, self.q1)
+        return self.ntt(l[:], self.zetas1, self.q1)
 
     def intt_q1(self, l: list[int]) -> list[int]:
         """Run Inverse NTT on the integer list"""
-        return self.intt(l, self.zetas1, self.q1)
+        return self.intt(l[:], self.zetas1, self.q1)
 
     def ntt_q2(self, l: list[int]) -> list[int]:
         """Run NTT on the integer list"""
-        return self.ntt(l, self.zetas2, self.q2)
+        return self.ntt(l[:], self.zetas2, self.q2)
 
     def intt_q2(self, l: list[int]) -> list[int]:
         """Run Inverse NTT on the integer list"""
-        return self.intt(l, self.zetas2, self.q2)
+        return self.intt(l[:], self.zetas2, self.q2)
