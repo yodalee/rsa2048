@@ -1,4 +1,21 @@
-from nttrsa import NttRsa
+from nttrsa import NttRsa, CT_BFU, GS_BFU
+
+
+def ZetasGen():
+    indexes = []
+    drop = False
+    while True:
+        if len(indexes) == 0:
+            num = 64
+        else:
+            if not drop:
+                num = indexes[0] // 2
+            else:
+                num = (indexes[0] + 64) // 2
+                indexes.pop(0)
+            drop = not drop
+        indexes.append(num)
+        yield num
 
 
 class NttRsa2048_32b(NttRsa):
