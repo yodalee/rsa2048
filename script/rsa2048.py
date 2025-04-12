@@ -25,6 +25,8 @@ class NttRsa2048_32b(NttRsa):
 
     def __init__(self):
         super().__init__(2048, 11, 384, 12289, 65537)
+        self.ntt_len = 128
+        self.ntt_round = 7
 
         self.zetas1 = [
             1, 81, 6561, 3014, 10643, 1853, 2625, 3712,
@@ -71,18 +73,39 @@ class NttRsa2048_32b(NttRsa):
         q1inv = 45373
         return a + (((b-a) * q1inv % self.q2) * self.q1) % self.q
 
+    def ntt(self, l: list[int], zetas: list[int], q: int) -> list[int]:
+        assert len(
+            l) == self.len_poly, f"NTT: Length of input list must be {self.len_poly}"
+        assert len(
+            zetas) == self.ntt_len, f"NTT: Length of zetas must be {self.ntt_len}"
+        g = ZetasGen()
+
+        for dist in [192, 96, 48, 24, 12, 6, 3]:
+            for start in range(0, len(l), dist * 2):
+                zeta = zetas[next(g)]
+
+                for j in range(dist):
+                    # print(start + j, start + j + dist)
+                    l[start + j], l[start + j + dist] = CT_BFU(
+                        l[start + j], l[start + j + dist], zeta, q)
+        return l
+
+    def intt(self, l: list[int], zetas: list[int], q: int) -> list[int]:
+        assert len(
+            l) == self.len_poly, f"intt: Length of input list must be {self.len_poly}"
+
     def ntt_q1(self, l: list[int]) -> list[int]:
         """Run NTT on the integer list"""
-        raise NotImplementedError
+        return self.ntt(l, self.zetas1, self.q1)
 
     def intt_q1(self, l: list[int]) -> list[int]:
         """Run Inverse NTT on the integer list"""
-        raise NotImplementedError
+        return self.intt(l, self.zetas1, self.q1)
 
     def ntt_q2(self, l: list[int]) -> list[int]:
         """Run NTT on the integer list"""
-        raise NotImplementedError
+        return self.ntt(l, self.zetas2, self.q2)
 
     def intt_q2(self, l: list[int]) -> list[int]:
         """Run Inverse NTT on the integer list"""
-        raise NotImplementedError
+        return self.intt(l, self.zetas2, self.q2)
