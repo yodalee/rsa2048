@@ -1,23 +1,6 @@
 from nttrsa import NttRsa, CT_BFU, GS_BFU
 
 
-def ZetasGen():
-    indexes = []
-    drop = False
-    while True:
-        if len(indexes) == 0:
-            num = 64
-        else:
-            if not drop:
-                num = indexes[0] // 2
-            else:
-                num = (indexes[0] + 64) // 2
-                indexes.pop(0)
-            drop = not drop
-        indexes.append(num)
-        yield num
-
-
 class NttRsa2048_32b(NttRsa):
     """
     NTT-RSA 2048-bit key size with on 32-bit processor
@@ -27,6 +10,13 @@ class NttRsa2048_32b(NttRsa):
         super().__init__(2048, 11, 384, 12289, 65537)
         self.ntt_len = 128
         self.ntt_round = 7
+
+        self.ntt_index = [
+            1, 33, 17, 49, 9,  41, 25, 57, 5, 37, 21, 53, 13, 45, 29, 61,
+            3, 35, 19, 51, 11, 43, 27, 59, 7, 39, 23, 55, 15, 47, 31, 63,
+            2, 34, 18, 50, 10, 42, 26, 58, 6, 38, 22, 54, 14, 46, 30, 62,
+            4, 36, 20, 52, 12, 44, 28, 60, 8, 40, 24, 56, 16, 48, 32, 64
+        ]
 
         self.zetas1 = [
             1, 81, 6561, 3014, 10643, 1853, 2625, 3712,
@@ -78,11 +68,12 @@ class NttRsa2048_32b(NttRsa):
             l) == self.len_poly, f"NTT: Length of input list must be {self.len_poly}"
         assert len(
             zetas) == self.ntt_len, f"NTT: Length of zetas must be {self.ntt_len}"
-        g = ZetasGen()
 
-        for dist in [192, 96, 48, 24, 12, 6, 3]:
+        for i, dist in enumerate([192, 96, 48, 24, 12, 6, 3]):
+            zeta_idx = -1 * (1 << i)
             for start in range(0, len(l), dist * 2):
-                zeta = zetas[next(g)]
+                zeta = zetas[self.ntt_index[zeta_idx]]
+                zeta_idx += 1
 
                 for j in range(dist):
                     # print(start + j, start + j + dist)
