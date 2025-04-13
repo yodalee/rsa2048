@@ -151,7 +151,7 @@ class NttRsa2048_32b(NttRsa):
         # Multiply a2 x^2 + a1 x + a0 with b2 x^2 + b1 x + b0 Under NTT domain of x^3 - omega
         for i in range(self.ntt_len):
             idx = self.ntt_index[i//2] + (64 if i % 2 == 1 else 0)
-            omega = self.zetas1[idx % 128]
+            omega = self.zetas2[idx % 128]
             a0 = a[3*i + 0]
             a1 = a[3*i + 1]
             a2 = a[3*i + 2]
