@@ -39,6 +39,32 @@ class TestNttRsa2048_32b(unittest.TestCase):
         for i in range(384):
             self.assertEqual(ys[i], 1 if i == 3 else 0)
 
+    def test_multiply(self):
+        rsa = NttRsa2048_32b()
+        # a = 1 + 2x + 3x^2 + ... + 384x^383
+        a = [(i + 1) for i in range(384)]
+        # b = 384 + 383x + 382x^2 + ... + 1x^383
+        b = [(384 - i) for i in range(384)]
+
+        # Schoolbook multiplication
+        c_schoolbook = [0] * 384
+        for i in range(384):
+            for j in range(384):
+                if i + j < 384:
+                    c_schoolbook[i + j] += a[i] * b[j]
+                else:
+                    c_schoolbook[i + j - 384] += a[i] * b[j]
+
+        # NTT-based multiplication
+        a_ntt = rsa.ntt_q1(a)
+        b_ntt = rsa.ntt_q1(b)
+        c_ntt = rsa.mul_q1(a_ntt, b_ntt)
+        c_ntt_result = rsa.intt_q1(c_ntt)
+
+        # Check if both methods produce the same result
+        for i in range(384):
+            self.assertEqual(c_schoolbook[i] % rsa.q1, c_ntt_result[i])
+
 
 if __name__ == '__main__':
     unittest.main()

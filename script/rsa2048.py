@@ -10,7 +10,6 @@ class NttRsa2048_32b(NttRsa):
         super().__init__(2048, 11, 384, 12289, 65537)
         self.ntt_len = 128
         self.ntt_round = 7
-
         self.ntt_index = [
             1, 33, 17, 49, 9,  41, 25, 57, 5, 37, 21, 53, 13, 45, 29, 61,
             3, 35, 19, 51, 11, 43, 27, 59, 7, 39, 23, 55, 15, 47, 31, 63,
@@ -115,3 +114,54 @@ class NttRsa2048_32b(NttRsa):
     def intt_q2(self, l: list[int]) -> list[int]:
         """Run Inverse NTT on the integer list"""
         return self.intt(l[:], self.zetas2, self.q2)
+
+    def mul_q1(self, a: list[int], b: list[int]) -> list[int]:
+        assert len(
+            a) == self.len_poly, f"mul_q1: Length of input list a must be {self.len_poly}"
+        assert len(
+            b) == self.len_poly, f"mul_q1: Length of input list b must be {self.len_poly}"
+        c = [0] * self.len_poly
+
+        # Multiply a2 x^2 + a1 x + a0 with b2 x^2 + b1 x + b0 Under NTT domain of x^3 - omega
+        for i in range(self.ntt_len):
+            idx = self.ntt_index[i//2] + (64 if i % 2 == 1 else 0)
+            omega = self.zetas1[idx % 128]
+            a0 = a[3*i + 0]
+            a1 = a[3*i + 1]
+            a2 = a[3*i + 2]
+            b0 = b[3*i + 0]
+            b1 = b[3*i + 1]
+            b2 = b[3*i + 2]
+            # c0 = a0b0 + omega(a2b1 +a1b2)
+            # c1 = a1b0 + a0b1 + omega(a2b2)
+            # c2 = a2b0 + a1b1 + a0b2
+            c[3*i + 0] = (a0 * b0 + omega * (a2 * b1 + a1 * b2)) % self.q1
+            c[3*i + 1] = (a1 * b0 + a0 * b1 + omega * (a2 * b2)) % self.q1
+            c[3*i + 2] = (a2 * b0 + a1 * b1 + a0 * b2) % self.q1
+        return c
+
+    def mul_q2(self, a: list[int], b: list[int]) -> list[int]:
+        assert len(
+            a) == self.len_poly, f"mul_q2: Length of input list a must be {self.len_poly}"
+        assert len(
+            b) == self.len_poly, f"mul_q2: Length of input list b must be {self.len_poly}"
+
+        c = [0] * self.len_poly
+
+        # Multiply a2 x^2 + a1 x + a0 with b2 x^2 + b1 x + b0 Under NTT domain of x^3 - omega
+        for i in range(self.ntt_len):
+            idx = self.ntt_index[i//2] + (64 if i % 2 == 1 else 0)
+            omega = self.zetas1[idx % 128]
+            a0 = a[3*i + 0]
+            a1 = a[3*i + 1]
+            a2 = a[3*i + 2]
+            b0 = b[3*i + 0]
+            b1 = b[3*i + 1]
+            b2 = b[3*i + 2]
+            # c0 = a0b0 + omega(a2b1 +a1b2)
+            # c1 = a1b0 + a0b1 + omega(a2b2)
+            # c2 = a2b0 + a1b1 + a0b2
+            c[3*i + 0] = (a0 * b0 + omega * (a2 * b1 + a1 * b2)) % self.q2
+            c[3*i + 1] = (a1 * b0 + a0 * b1 + omega * (a2 * b2)) % self.q2
+            c[3*i + 2] = (a2 * b0 + a1 * b1 + a0 * b2) % self.q2
+        return c
