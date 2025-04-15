@@ -24,12 +24,22 @@ class NttRsa:
         self.q = q1 * q2
 
     def chunk(self, a: int) -> list[int]:
-        """chunk number every l bits, list [0] will store the chunk near LSB"""
-        raise NotImplementedError
+        """Chunk number every l bits, list [0] will store the chunk near LSB"""
+        chunks = []
+        mask = (1 << self.l) - 1  # Mask to extract l bits
+        for _ in range(self.len_poly):
+            chunks.append(a & mask)
+            a >>= self.l
+        return chunks
 
     def dechunk(self, l: list[int]) -> int:
-        """dechunk list of integer, sum up each integer by offset l bits"""
-        raise NotImplementedError
+        """Dechunk list of integers, sum up each integer by offset l bits"""
+        assert len(
+            l) == self.len_poly, "Input list length must match self.len_poly"
+        result = 0
+        for i, chunk in enumerate(l):
+            result += chunk << (i * self.l)
+        return result
 
     def crt(self, x: int, y: int) -> int:
         """Chinese Remainder Theorem
