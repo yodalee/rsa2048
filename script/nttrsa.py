@@ -1,4 +1,3 @@
-
 # Helper function of NTT
 def CT_BFU(a, b, omega, q):
     m = (b * omega) % q
@@ -32,11 +31,21 @@ class NttRsa:
         """dechunk list of integer, sum up each integer by offset l bits"""
         raise NotImplementedError
 
-    def crt(self, a: int, b: int) -> int:
+    def crt(self, x: int, y: int) -> int:
         """Chinese Remainder Theorem
-        Input: a mod q1, b mod q2
-        Output: x such that x mod q1 = a, x mod q2 = b"""
+        Input: x mod q1, y mod q2
+        Output: z such that z mod q1 = x, z mod q2 = y"""
         raise NotImplementedError
+
+    def crts(self, xs: list[int], ys: list[int]) -> list[int]:
+        """Apply CRT element-wise on xs and ys to produce zs
+        Input: xs mod q1, ys mod q2
+        Output: zs such that zs mod q1 = xs, zs mod q2 = ys
+        """
+        assert len(xs) == self.len_poly and len(
+            ys) == self.len_poly, "Lengths of xs and ys must match len_poly"
+        zs = [self.crt(x, y) for x, y in zip(xs, ys)]
+        return zs
 
     def ntt_q1(self, l: list[int]) -> list[int]:
         """Run NTT on the integer list"""

@@ -54,13 +54,13 @@ class NttRsa2048_32b(NttRsa):
             64, 26942, 65280, 20837, 8, 19752, 8160, 27181
         ]
 
-    def crt(self, a: int, b: int) -> int:
+    def crt(self, x: int, y: int) -> int:
         """Chinese Remainder Theorem
-        Input: a mod q1, b mod q2
-        Output: x such that x mod q1 = a, x mod q2 = b"""
+        Input: x mod q1, y mod q2
+        Output: z such that z mod q1 = x, z mod q2 = y"""
         # qinv = 45373 = 12289 ** 65535 % 65537
         q1inv = 45373
-        return a + (((b-a) * q1inv % self.q2) * self.q1) % self.q
+        return x + (((y-x) * q1inv % self.q2) * self.q1) % self.q
 
     def ntt(self, l: list[int], zetas: list[int], q: int) -> list[int]:
         assert len(
