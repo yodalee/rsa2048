@@ -115,6 +115,34 @@ class TestNttRsa2048_32b(unittest.TestCase):
 
         self.assertEqual(sqr, gold)
 
+    def test_multiply(self):
+        # generate a random odd number as p
+        p = random.getrandbits(2047) | 1
+        while (a := random.getrandbits(2047)) > p:
+            pass
+        while (b := random.getrandbits(2047)) > p:
+            pass
+
+        # Calculate pinv modulo 2^2048
+        pinv = pow(p, -1, 1 << 2048)
+
+        # Calculate ntt form of p
+        pl = self.rsa.chunk(p)
+        ph1 = self.rsa.ntt_q1(pl)
+        ph2 = self.rsa.ntt_q2(pl)
+
+        # Calculate ntt form of pinv
+        pml = self.rsa.chunk(pinv)
+        pm1 = self.rsa.ntt_q1(pml)
+        pm2 = self.rsa.ntt_q2(pml)
+
+        # Calculate golden: multiply(a, b) = a*b*R-1 mod p
+        gold = (a * b * pow(1 << 2048, -1, p)) % p
+        # Calculate using multiply
+        product = self.rsa.multiply(a, b, p, ph1, ph2, pm1, pm2)
+
+        self.assertEqual(product, gold)
+
 
 if __name__ == '__main__':
     unittest.main()

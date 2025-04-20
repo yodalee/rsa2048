@@ -151,22 +151,73 @@ class NttRsa:
         if high < 0:
             high += p
         return high
-    def intmul(self, a: int, b: int, p: int):
+
+    def multiply(self, a: int, b: int, p: int,
+                 ph1: list[int], ph2: list[int],
+                 pm1: list[int], pm2: list[int]) -> int:
         """Multiply montgormery form number a, b, calculating a * b % p
         Input: aR mod p, bR mod p
         Output: c = abR mod p
+
+        It follows the montgomery reduction algorithm that:
+          Mont(a, b) = high(a * b + p * low(p^-1 * low(a * b)))
+        The R used here is 2^self.N
 
         The algorithm
         Assume that ph1, ph2 = NTT(chunk(p)), pm1, pm2 = NTT(chunk(p^-1 mod 2^k))
         1: ah = NTT( chunk(a) )
         2: bh = NTT( chunk(b) )
         2: t = dechunk( INTT(ah * bh) )
-        3: th = NTT( chunk(t mod 2^k) )
+        3: th = NTT( chunk(t mod R) )
         4: l = dechunk( INTT(th * pm1) )
-        5: lh = NTT( chunk(l mod 2^k) )
+        5: lh = NTT( chunk(l mod R) )
         6: r = dechunk( INTT (lh * ph) )
-        7: c = t/2k - r/2k
+        7: c = t/R - r/R
         8: if c < 0 then c = c + p
         9: return c
         """
-        pass
+        mask = (1 << self.N) - 1
+
+        # t = a * b
+        al = self.chunk(a)
+        bl = self.chunk(b)
+        ah1 = self.ntt_q1(al)
+        ah2 = self.ntt_q2(al)
+        bh1 = self.ntt_q1(bl)
+        bh2 = self.ntt_q2(bl)
+        abh1 = self.mul_q1(ah1, bh1)
+        abh2 = self.mul_q2(ah2, bh2)
+        ab1 = self.intt_q1(abh1)
+        ab2 = self.intt_q2(abh2)
+        abl = self.crts(ab1, ab2)
+        t = self.dechunk(abl)
+
+        # l = (t mod R) * minpinv
+        t_low = t & mask
+        t_lowl = self.chunk(t_low)
+        th1 = self.ntt_q1(t_lowl)
+        th2 = self.ntt_q2(t_lowl)
+        lh1 = self.mul_q1(th1, pm1)
+        lh2 = self.mul_q2(th2, pm2)
+        l1 = self.intt_q1(lh1)
+        l2 = self.intt_q2(lh2)
+        ll = self.crts(l1, l2)
+        l = self.dechunk(ll)
+
+        # lp = l * P
+        l_low = l & mask
+        l_lowl = self.chunk(l_low)
+        lh1 = self.ntt_q1(l_lowl)
+        lh2 = self.ntt_q2(l_lowl)
+        lph1 = self.mul_q1(lh1, ph1)
+        lph2 = self.mul_q2(lh2, ph2)
+        lp1 = self.intt_q1(lph1)
+        lp2 = self.intt_q2(lph2)
+        lpl = self.crts(lp1, lp2)
+        lp = self.dechunk(lpl)
+
+        # c = t - lp
+        high = (t >> self.N) - (lp >> self.N)
+        if high < 0:
+            high += p
+        return high
