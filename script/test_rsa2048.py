@@ -89,6 +89,32 @@ class TestNttRsa2048_32b(unittest.TestCase):
         for i in range(384):
             self.assertEqual(c_schoolbook[i] % self.rsa.q2, c_ntt_result[i])
 
+    def test_square(self):
+        # generate a random odd number as p
+        p = random.getrandbits(2047) | 1
+        while (a := random.getrandbits(2047)) > p:
+            pass
+
+        # Calculate pinv modulo 2^2048
+        pinv = pow(p, -1, 1 << 2048)
+
+        # Calculate ntt form of p
+        pl = self.rsa.chunk(p)
+        ph1 = self.rsa.ntt_q1(pl)
+        ph2 = self.rsa.ntt_q2(pl)
+
+        # Calculate ntt form of pinv
+        pml = self.rsa.chunk(pinv)
+        pm1 = self.rsa.ntt_q1(pml)
+        pm2 = self.rsa.ntt_q2(pml)
+
+        # Calculate golden: square(a) = a*a*R-1 mod p
+        gold = pow(a, 2, p) * pow(1 << 2048, -1, p) % p
+        # Calculate using square
+        sqr = self.rsa.square(a, p, ph1, ph2, pm1, pm2)
+
+        self.assertEqual(sqr, gold)
+
 
 if __name__ == '__main__':
     unittest.main()

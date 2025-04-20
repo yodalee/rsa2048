@@ -87,32 +87,77 @@ class NttRsa:
         """
         raise NotImplementedError
 
-    def square(self, a: int, p: int) -> int:
-        """Double the montgomery form number aR mod p under modulo p
+    def square(self, a: int, p: int,
+               ph1: list[int], ph2: list[int],
+               pm1: list[int], pm2: list[int]) -> int:
+        """Square the montgomery form number aR mod p under modulo p
         Input: a, aR mod p
         Output: c = a^2 * R mod p
 
+        It follows the montgomery reduction algorithm that:
+          Mont(a, b) = high(a * b + p * low(p^-1 * low(a * b)))
+        The R used here is 2^self.N
+
         The algorithm
-        Assume that ph = NTT(chunk(p)), pm1 = NTT(chunk(p^-1 mod 2^k))
+        Assume that ph1,ph2 = NTT(chunk(p)), pm1,pm2 = NTT(chunk(p^-1 mod 2^k))
         1: ah = NTT( chunk(a) )
         2: t = dechunk( INTT(ah * ah) )
-        3: th = NTT( chunk(t mod 2^k) )
+        3: th = NTT( chunk(t mod R) )
         4: l = dechunk( INTT(th * pm1) )
-        5: lh = NTT( chunk(l mod 2^k) )
+        5: lh = NTT( chunk(l mod R) )
         6: r = dechunk( INTT (lh * ph) )
-        7: c = t/2k - r/2k
+        7: c = t/R - r/R
         8: if c < 0 then c = c + p
         9: return c
         """
-        pass
+        mask = (1 << self.N) - 1
 
+        # Calculate t = a * a
+        al = self.chunk(a)
+        ah1 = self.ntt_q1(al)
+        ah2 = self.ntt_q2(al)
+        sqrh1 = self.mul_q1(ah1, ah1)
+        sqrh2 = self.mul_q2(ah2, ah2)
+        sqrl1 = self.intt_q1(sqrh1)
+        sqrl2 = self.intt_q2(sqrh2)
+        sqrl = self.crts(sqrl1, sqrl2)
+        t = self.dechunk(sqrl)
+
+        # l = (t mod R) * minpinv
+        t_low = t & mask
+        t_lowl = self.chunk(t_low)
+        th1 = self.ntt_q1(t_lowl)
+        th2 = self.ntt_q2(t_lowl)
+        lh1 = self.mul_q1(th1, pm1)
+        lh2 = self.mul_q2(th2, pm2)
+        l1 = self.intt_q1(lh1)
+        l2 = self.intt_q2(lh2)
+        ll = self.crts(l1, l2)
+        l = self.dechunk(ll)
+
+        # lp = l * p
+        l_low = l & mask
+        l_lowl = self.chunk(l_low)
+        lh1 = self.ntt_q1(l_lowl)
+        lh2 = self.ntt_q2(l_lowl)
+        lph1 = self.mul_q1(lh1, ph1)
+        lph2 = self.mul_q2(lh2, ph2)
+        lpl1 = self.intt_q1(lph1)
+        lpl2 = self.intt_q2(lph2)
+        lpl = self.crts(lpl1, lpl2)
+        lp = self.dechunk(lpl)
+
+        high = (t >> self.N) - (lp >> self.N)
+        if high < 0:
+            high += p
+        return high
     def intmul(self, a: int, b: int, p: int):
         """Multiply montgormery form number a, b, calculating a * b % p
         Input: aR mod p, bR mod p
         Output: c = abR mod p
 
         The algorithm
-        Assume that ph = NTT(chunk(p)), pm1 = NTT(chunk(p^-1 mod 2^k))
+        Assume that ph1, ph2 = NTT(chunk(p)), pm1, pm2 = NTT(chunk(p^-1 mod 2^k))
         1: ah = NTT( chunk(a) )
         2: bh = NTT( chunk(b) )
         2: t = dechunk( INTT(ah * bh) )
