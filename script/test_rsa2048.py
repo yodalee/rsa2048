@@ -7,13 +7,19 @@ class TestNttRsa2048_32b(unittest.TestCase):
     def setUp(self):
         self.rsa = NttRsa2048_32b()
 
-    def test_ntt_const(self):
+    def test_nttq1_const(self):
         xs = [3 if i == 0 else 0 for i in range(384)]
         ys = self.rsa.ntt_q1(xs)
         for i in range(384):
             self.assertEqual(ys[i], 3 if i % 3 == 0 else 0)
 
-    def test_ntt_x3(self):
+    def test_nttq2_const(self):
+        xs = [3 if i == 0 else 0 for i in range(384)]
+        ys = self.rsa.ntt_q2(xs)
+        for i in range(384):
+            self.assertEqual(ys[i], 3 if i % 3 == 0 else 0)
+
+    def test_nttq1_x3(self):
         xs = [1 if i == 3 else 0 for i in range(384)]
         ys = self.rsa.ntt_q1(xs)
         for i, p in enumerate(self.rsa.ntt_index):
@@ -24,18 +30,44 @@ class TestNttRsa2048_32b(unittest.TestCase):
             self.assertEqual(ys[i*6+4], 0)
             self.assertEqual(ys[i*6+5], 0)
 
-    def test_intt_const(self):
+    def test_nttq2_x3(self):
+        xs = [1 if i == 3 else 0 for i in range(384)]
+        ys = self.rsa.ntt_q2(xs)
+        for i, p in enumerate(self.rsa.ntt_index):
+            self.assertEqual(ys[i*6], pow(4938, p, 65537))
+            self.assertEqual(ys[i*6+1], 0)
+            self.assertEqual(ys[i*6+2], 0)
+            self.assertEqual(ys[i*6+3], pow(4938, p+64, 65537))
+            self.assertEqual(ys[i*6+4], 0)
+            self.assertEqual(ys[i*6+5], 0)
+
+    def test_inttq1_const(self):
         xs = [3 if i % 3 == 0 else 0 for i in range(384)]
         ys = self.rsa.intt_q1(xs)
         for i in range(384):
             self.assertEqual(ys[i], 3 if i == 0 else 0)
 
-    def test_intt_x3(self):
+    def test_inttq2_const(self):
+        xs = [3 if i % 3 == 0 else 0 for i in range(384)]
+        ys = self.rsa.intt_q2(xs)
+        for i in range(384):
+            self.assertEqual(ys[i], 3 if i == 0 else 0)
+
+    def test_inttq1_x3(self):
         xs = [0] * 384
         for i, p in enumerate(self.rsa.ntt_index):
             xs[i*6+0] = pow(81, p, 12289)
             xs[i*6+3] = pow(81, p+64, 12289)
         ys = self.rsa.intt_q1(xs)
+        for i in range(384):
+            self.assertEqual(ys[i], 1 if i == 3 else 0)
+
+    def test_inttq2_x3(self):
+        xs = [0] * 384
+        for i, p in enumerate(self.rsa.ntt_index):
+            xs[i*6+0] = pow(4938, p, 65537)
+            xs[i*6+3] = pow(4938, p+64, 65537)
+        ys = self.rsa.intt_q2(xs)
         for i in range(384):
             self.assertEqual(ys[i], 1 if i == 3 else 0)
 
