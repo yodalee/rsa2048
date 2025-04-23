@@ -103,6 +103,23 @@ class NttRsa:
         """
         raise NotImplementedError
 
+    def lower(self, l: list[int]) -> list[int]:
+        """Extract the lower part of a chunked number"""
+        assert len(
+            l) == self.len_poly, "Input list length must match self.len_poly"
+        ret = [0] * self.len_poly
+        mask = (1 << self.l) - 1
+        remain = 0
+        n_chunks = (self.N + self.l - 1) // self.l
+
+        for i, chunk in enumerate(l[:n_chunks]):
+            sum = (chunk + remain)
+            ret[i] = sum & mask
+            remain = sum >> self.l
+        # Modulo final block to N bits
+        ret[n_chunks-1] &= ((1 << self.N % self.l) - 1)
+        return ret
+
     def square(self, a: int, p: int,
                ph1: list[int], ph2: list[int],
                pm1: list[int], pm2: list[int]) -> int:
@@ -126,7 +143,6 @@ class NttRsa:
         8: if c < 0 then c = c + p
         9: return c
         """
-        mask = (1 << self.N) - 1
 
         # Calculate t = a * a
         al = self.chunk(a)
@@ -140,8 +156,7 @@ class NttRsa:
         t = self.dechunk(sqrl)
 
         # l = (t mod R) * minpinv
-        t_low = t & mask
-        t_lowl = self.chunk(t_low)
+        t_lowl = self.lower(sqrl)
         th1 = self.ntt_q1(t_lowl)
         th2 = self.ntt_q2(t_lowl)
         lh1 = self.mul_q1(th1, pm1)
@@ -149,11 +164,9 @@ class NttRsa:
         l1 = self.intt_q1(lh1)
         l2 = self.intt_q2(lh2)
         ll = self.crts(l1, l2)
-        l = self.dechunk(ll)
 
         # lp = l * p
-        l_low = l & mask
-        l_lowl = self.chunk(l_low)
+        l_lowl = self.lower(ll)
         lh1 = self.ntt_q1(l_lowl)
         lh2 = self.ntt_q2(l_lowl)
         lph1 = self.mul_q1(lh1, ph1)
@@ -192,7 +205,6 @@ class NttRsa:
         8: if c < 0 then c = c + p
         9: return c
         """
-        mask = (1 << self.N) - 1
 
         # t = a * b
         al = self.chunk(a)
@@ -209,8 +221,7 @@ class NttRsa:
         t = self.dechunk(abl)
 
         # l = (t mod R) * minpinv
-        t_low = t & mask
-        t_lowl = self.chunk(t_low)
+        t_lowl = self.lower(abl)
         th1 = self.ntt_q1(t_lowl)
         th2 = self.ntt_q2(t_lowl)
         lh1 = self.mul_q1(th1, pm1)
@@ -218,11 +229,9 @@ class NttRsa:
         l1 = self.intt_q1(lh1)
         l2 = self.intt_q2(lh2)
         ll = self.crts(l1, l2)
-        l = self.dechunk(ll)
 
         # lp = l * P
-        l_low = l & mask
-        l_lowl = self.chunk(l_low)
+        l_lowl = self.lower(ll)
         lh1 = self.ntt_q1(l_lowl)
         lh2 = self.ntt_q2(l_lowl)
         lph1 = self.mul_q1(lh1, ph1)
