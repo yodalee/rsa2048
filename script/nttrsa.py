@@ -1,4 +1,8 @@
+import math
+
 # Helper function of NTT
+
+
 def CT_BFU(a, b, omega, q):
     m = (b * omega) % q
     return (a + m) % q, (a - m) % q
@@ -22,6 +26,18 @@ class NttRsa:
         self.q1 = q1
         self.q2 = q2
         self.q = q1 * q2
+
+    def qinv(self, p: int) -> int:
+        """Calculate p^-1 mod 2^N by hensel_lifting"""
+        # initial setting x*y - 1 = 2x-x^2-1 = -(x-1)^2
+        # since p is odd, (x-1)^2 = 4*k
+        r = 1 << self.N
+        x = p & 0xFFFFFFFF
+        y = (2 - x) % r
+
+        for _ in range(int(math.log2(self.N // 2))):
+            y = (2 * y - p * y * y) % r
+        return y
 
     def chunk(self, a: int) -> list[int]:
         """Chunk number every l bits, list [0] will store the chunk near LSB"""

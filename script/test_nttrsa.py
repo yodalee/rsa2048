@@ -1,5 +1,6 @@
 import unittest
 from nttrsa import NttRsa
+import random  # Add import for random
 
 
 class TestNttRsa(unittest.TestCase):
@@ -31,6 +32,16 @@ class TestNttRsa(unittest.TestCase):
         chunks = self.ntt_rsa.chunk(number)
         reconstructed_number = self.ntt_rsa.dechunk(chunks)
         self.assertEqual(reconstructed_number, number)
+
+    def test_qinv(self):
+        # Generate a 2047-bit odd number
+        # Ensure it's odd by setting the least significant bit
+        p = random.getrandbits(2047) | 1
+        # Call the qinv function
+        pinv = self.ntt_rsa.qinv(p)
+        # Verify the result is p^-1 mod 2^2048
+        modulus = 2**2048
+        self.assertEqual((p * pinv) % modulus, 1)
 
 
 if __name__ == "__main__":
