@@ -26,6 +26,32 @@ class NttRsa:
         self.q1 = q1
         self.q2 = q2
         self.q = q1 * q2
+        # Modulus p and their derivative, initially None
+        self.p = None
+        self.ph1 = None
+        self.ph2 = None
+        self.pm1 = None
+        self.pm2 = None
+        # To convert to montgomery form
+        self.r = None
+        self.rsqr = None
+
+    def setp(self, p: int):
+        """Set the modulus p and calculate derived fields."""
+        self.p = p
+        # derive NTT form of p
+        p_chunks = self.chunk(p)
+        self.ph1 = self.ntt_q1(p_chunks)  # NTT(chunk(p)) for q1
+        self.ph2 = self.ntt_q2(p_chunks)  # NTT(chunk(p)) for q2
+        # derive NTT form of p^-1 mod 2^N
+        p_inv = self.qinv(p)
+        p_inv = pow(p, -1, 1 << 2048)  # p^-1 mod q
+        p_inv_chunks = self.chunk(p_inv)
+        self.pm1 = self.ntt_q1(p_inv_chunks)  # NTT(chunk(p^-1 mod 2^k)) for q1
+        self.pm2 = self.ntt_q2(p_inv_chunks)  # NTT(chunk(p^-1 mod 2^k)) for q2
+        # derive R^2 mod p for conversion to montgomery form
+        self.r = (1 << self.N) % p
+        self.rsqr = pow(self.r, 2, p)  # R^2 mod p
 
     def qinv(self, p: int) -> int:
         """Calculate p^-1 mod 2^N by hensel_lifting"""
@@ -120,9 +146,7 @@ class NttRsa:
         ret[n_chunks-1] &= ((1 << self.N % self.l) - 1)
         return ret
 
-    def square(self, a: int, p: int,
-               ph1: list[int], ph2: list[int],
-               pm1: list[int], pm2: list[int]) -> int:
+    def square(self, a: int) -> int:
         """Square the montgomery form number aR mod p under modulo p
         Input: a, aR mod p
         Output: c = a^2 * R mod p
@@ -143,6 +167,8 @@ class NttRsa:
         8: if c < 0 then c = c + p
         9: return c
         """
+        if self.p is None:
+            raise ValueError("Modulus p has not been set. Call setp() first.")
 
         # Calculate t = a * a
         al = self.chunk(a)
@@ -159,8 +185,8 @@ class NttRsa:
         t_lowl = self.lower(sqrl)
         th1 = self.ntt_q1(t_lowl)
         th2 = self.ntt_q2(t_lowl)
-        lh1 = self.mul_q1(th1, pm1)
-        lh2 = self.mul_q2(th2, pm2)
+        lh1 = self.mul_q1(th1, self.pm1)
+        lh2 = self.mul_q2(th2, self.pm2)
         l1 = self.intt_q1(lh1)
         l2 = self.intt_q2(lh2)
         ll = self.crts(l1, l2)
@@ -169,8 +195,8 @@ class NttRsa:
         l_lowl = self.lower(ll)
         lh1 = self.ntt_q1(l_lowl)
         lh2 = self.ntt_q2(l_lowl)
-        lph1 = self.mul_q1(lh1, ph1)
-        lph2 = self.mul_q2(lh2, ph2)
+        lph1 = self.mul_q1(lh1, self.ph1)
+        lph2 = self.mul_q2(lh2, self.ph2)
         lpl1 = self.intt_q1(lph1)
         lpl2 = self.intt_q2(lph2)
         lpl = self.crts(lpl1, lpl2)
@@ -178,12 +204,10 @@ class NttRsa:
 
         high = (t >> self.N) - (lp >> self.N)
         if high < 0:
-            high += p
+            high += self.p
         return high
 
-    def multiply(self, a: int, b: int, p: int,
-                 ph1: list[int], ph2: list[int],
-                 pm1: list[int], pm2: list[int]) -> int:
+    def multiply(self, a: int, b: int) -> int:
         """Multiply montgormery form number a, b, calculating a * b % p
         Input: aR mod p, bR mod p
         Output: c = abR mod p
@@ -198,13 +222,15 @@ class NttRsa:
         2: bh = NTT( chunk(b) )
         2: t = dechunk( INTT(ah * bh) )
         3: th = NTT( chunk(t mod R) )
-        4: l = dechunk( INTT(th * pm1) )
+        4: l = dechunk( INTT(th * pm) )
         5: lh = NTT( chunk(l mod R) )
         6: r = dechunk( INTT (lh * ph) )
         7: c = t/R - r/R
         8: if c < 0 then c = c + p
         9: return c
         """
+        if self.p is None:
+            raise ValueError("Modulus p has not been set. Call setp() first.")
 
         # t = a * b
         al = self.chunk(a)
@@ -224,8 +250,8 @@ class NttRsa:
         t_lowl = self.lower(abl)
         th1 = self.ntt_q1(t_lowl)
         th2 = self.ntt_q2(t_lowl)
-        lh1 = self.mul_q1(th1, pm1)
-        lh2 = self.mul_q2(th2, pm2)
+        lh1 = self.mul_q1(th1, self.pm1)
+        lh2 = self.mul_q2(th2, self.pm2)
         l1 = self.intt_q1(lh1)
         l2 = self.intt_q2(lh2)
         ll = self.crts(l1, l2)
@@ -234,8 +260,8 @@ class NttRsa:
         l_lowl = self.lower(ll)
         lh1 = self.ntt_q1(l_lowl)
         lh2 = self.ntt_q2(l_lowl)
-        lph1 = self.mul_q1(lh1, ph1)
-        lph2 = self.mul_q2(lh2, ph2)
+        lph1 = self.mul_q1(lh1, self.ph1)
+        lph2 = self.mul_q2(lh2, self.ph2)
         lp1 = self.intt_q1(lph1)
         lp2 = self.intt_q2(lph2)
         lpl = self.crts(lp1, lp2)
@@ -244,5 +270,5 @@ class NttRsa:
         # c = t - lp
         high = (t >> self.N) - (lp >> self.N)
         if high < 0:
-            high += p
+            high += self.p
         return high
