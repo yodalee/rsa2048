@@ -272,3 +272,34 @@ class NttRsa:
         if high < 0:
             high += self.p
         return high
+
+    def expmod_public(self, a: int, e: int) -> int:
+        """Exponentiate a to the power of e under modulo p
+        Input: a, e
+        Output: c = a^e mod p
+
+        The algorithm
+        1. Convert a to montgomery form
+        2. Square and multiply
+        3. Convert back to normal form
+        """
+        if self.p is None:
+            raise ValueError("Modulus p has not been set. Call setp() first.")
+        if e < 0 or e >= (1 << 32):
+            raise ValueError("Exponent e must be positive and less than 2^32")
+        if e == 0:
+            return 1
+
+        # Convert a to montgomery form
+        monta = self.multiply(a, self.rsqr)
+
+        c = self.r
+        binary = [int(d) for d in bin(e)[2:]]
+        for b in binary:
+            c = self.square(c)
+            if b == 1:
+                c = self.multiply(c, monta)
+
+        # Convert back to normal form
+        c = self.multiply(c, 1)
+        return c
