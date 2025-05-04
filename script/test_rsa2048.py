@@ -168,6 +168,24 @@ class TestNttRsa2048_32b(unittest.TestCase):
 
         self.assertEqual(result, gold)
 
+    def test_expmod(self):
+        # generate a random odd number as p
+        p = random.getrandbits(2047) | 1
+        while (a := random.getrandbits(2047)) > p:
+            pass
+        while (d := random.getrandbits(2047)) > p:
+            pass
+        # generate a random odd number as d
+        # d = random.getrandbits(2047)  # Large private exponent
+        self.rsa.setp(p)
+
+        # Calculate golden: pow(a, d, p)
+        gold = pow(a, d, p)
+        # Calculate using expmod_private
+        result = self.rsa.expmod_private(a, d)
+
+        self.assertEqual(result, gold)
+
 
 if __name__ == '__main__':
     unittest.main()

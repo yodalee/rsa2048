@@ -303,3 +303,41 @@ class NttRsa:
         # Convert back to normal form
         c = self.multiply(c, 1)
         return c
+
+    def expmod_private(self, a: int, d: int) -> int:
+        """Exponentiate a to the power of d under modulo p
+        Input: a, d
+        Output: c = a^d mod p
+
+        The algorithm
+        1. Preapare the table for constant time exponentiation
+        2. Square and multiply
+        3. Convert back to normal form
+        """
+        k_window = 4
+        mask = (1 << k_window) - 1
+        table = [0] * (1 << k_window)
+        # Generate the table for constant time exponentiation
+        # table[0] = R mod p, table[1] = aR mod p, ...
+        monta = self.multiply(a, self.rsqr)
+        table[0] = self.r
+        for i in range(1, 1 << k_window):
+            # Create a_pre to save multiply time
+            table[i] = self.multiply(table[i - 1], monta)
+
+        # Initialize c
+        i = (self.N-1) // k_window * k_window
+        idx = d >> i
+        c = table[idx]
+
+        # Square and multiply using constant window
+        while i > 0:
+            i -= k_window
+            idx = (d >> i) & mask
+            for _ in range(k_window):
+                c = self.square(c)
+            c = self.multiply(c, table[idx])
+
+        # Convert back to normal form
+        c = self.multiply(c, 1)
+        return c
